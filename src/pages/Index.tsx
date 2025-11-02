@@ -149,7 +149,9 @@ const TataCapitalLoanChatbot = () => {
           break;
 
         case 'ask_amount':
-          const amt = userInput.match(/\d+/);
+          // Remove commas and extract all digits for Indian number format (e.g., 2,00,000)
+          const cleanedInput = userInput.replace(/,/g, '');
+          const amt = cleanedInput.match(/\d+/);
           if (amt) {
             const amount = parseInt(amt[0]);
             const { customerData } = sessionData;
