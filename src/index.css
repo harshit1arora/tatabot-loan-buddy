@@ -52,6 +52,7 @@ All colors MUST be HSL.
     --agent-verification: 142 71% 45%;
     --agent-underwriting: 33 100% 50%;
     --agent-document: 158 64% 52%;
+    --agent-sanction: 259 80% 65%;
     
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(217 91% 35%) 0%, hsl(217 91% 60%) 100%);

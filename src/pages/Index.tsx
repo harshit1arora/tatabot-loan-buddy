@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Upload, CheckCircle, Loader, MessageSquare, User, Bot, Phone, Download, Shield, Clock, Star } from 'lucide-react';
+import { Send, Upload, CheckCircle, Loader, MessageSquare, User, Bot, Phone, Download, Shield, Clock, Star, Globe } from 'lucide-react';
+import { translations, t, Language } from '@/data/translations';
+import { extractSalarySlipData, formatExtractionForDisplay, extractionToJSON } from '@/utils/salaryExtractor';
 
 // Complete Customer Data
 const mockCustomers = [
@@ -47,72 +49,83 @@ const mockCustomers = [
 ];
 
 const TataCapitalLoanChatbot = () => {
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [uploadedFile, setUploadedFile] = useState(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [currentStage, setCurrentStage] = useState('conversation');
+  const [language, setLanguage] = useState<Language>('en');
   const [sessionData, setSessionData] = useState({
-    customerData: null, loanAmount: null, tenure: null, interestRate: 10.5,
-    emi: null, phoneVerified: false, eligibilityStatus: null
+    customerData: null as any,
+    loanAmount: null as number | null,
+    tenure: null as number | null,
+    interestRate: 10.5,
+    emi: null as number | null,
+    phoneVerified: false,
+    eligibilityStatus: null,
+    userName: ''
   });
   const [conversationState, setConversationState] = useState('greeting');
-  const messagesEndRef = useRef(null);
-  const fileInputRef = useRef(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const stages = [
-    { id: 'conversation', label: 'Conversation', icon: MessageSquare },
-    { id: 'verification', label: 'Verification', icon: CheckCircle },
-    { id: 'underwriting', label: 'Credit Check', icon: Star },
-    { id: 'sanction', label: 'Sanction', icon: CheckCircle }
+    { id: 'conversation', label: t('stageConversation', language), icon: MessageSquare },
+    { id: 'verification', label: t('stageVerification', language), icon: CheckCircle },
+    { id: 'underwriting', label: t('stageCreditCheck', language), icon: Star },
+    { id: 'sanction', label: t('stageSanction', language), icon: CheckCircle }
   ];
 
   useEffect(() => {
-    addBotMessage('Master Agent', '🙏 Namaste! Welcome to Tata Capital.\n\nI\'m your AI Personal Loan Assistant. May I know your name?');
+    addBotMessage(t('agentMaster', language), t('welcomeMessage', language));
   }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const addBotMessage = (agent, content, options = {}) => {
+  const addBotMessage = (agent: string, content: string, options: any = {}) => {
     setMessages(prev => [...prev, {
       id: Date.now() + Math.random(), type: 'bot', agent, content,
       timestamp: new Date(), ...options
     }]);
   };
 
-  const addUserMessage = (content) => {
+  const addUserMessage = (content: string) => {
     setMessages(prev => [...prev, {
       id: Date.now(), type: 'user', content, timestamp: new Date()
     }]);
   };
 
-  const calculateEMI = (principal, rate, tenure) => {
+  const calculateEMI = (principal: number, rate: number, tenure: number) => {
     const r = rate / (12 * 100);
     return Math.round((principal * r * Math.pow(1 + r, tenure)) / (Math.pow(1 + r, tenure) - 1));
   };
 
-  const checkEligibility = (customer, amount) => {
+  const checkEligibility = (customer: any, amount: number) => {
     if (customer.age < 21 || customer.age > 60) {
-      return { approved: false, reason: 'age', message: `Age restriction: ${customer.age} years (Required: 21-60)` };
+      return { approved: false, reason: 'age', message: t('rejectionAge', language, { age: customer.age }) };
     }
     if (customer.monthly_salary < 15000) {
-      return { approved: false, reason: 'salary', message: 'Monthly salary below ₹15,000' };
+      return { approved: false, reason: 'salary', message: t('rejectionSalary', language) };
     }
     if (customer.credit_score < 700) {
-      return { approved: false, reason: 'credit', message: `Credit score ${customer.credit_score} is below 700` };
+      return { approved: false, reason: 'credit', message: t('rejectionCredit', language, { score: customer.credit_score }) };
     }
     if (amount <= customer.pre_approved_limit) {
-      return { approved: true, instant: true, reason: 'instant', message: '✨ Instant approval available!' };
+      return { approved: true, instant: true, reason: 'instant', message: t('instantApproval', language) };
     }
     if (amount <= customer.pre_approved_limit * 2) {
-      return { approved: 'conditional', reason: 'salary_slip', message: 'Needs salary slip verification' };
+      return { approved: 'conditional', reason: 'salary_slip', message: t('needsVerification', language) };
     }
-    return { approved: false, reason: 'excess', message: 'Amount exceeds 2x pre-approved limit' };
+    return { approved: false, reason: 'excess', message: t('rejectionExcess', language) };
   };
 
-  const processConversation = (userInput) => {
+  const toggleLanguage = () => {
+    setLanguage(prev => prev === 'en' ? 'hi' : 'en');
+  };
+
+  const processConversation = (userInput: string) => {
     setIsTyping(true);
     setTimeout(() => {
       setIsTyping(false);
@@ -122,7 +135,7 @@ const TataCapitalLoanChatbot = () => {
         case 'greeting':
           setSessionData(prev => ({ ...prev, userName: userInput.trim() }));
           setConversationState('ask_phone');
-          addBotMessage('Master Agent', `Thank you, ${userInput.trim()}! 😊\n\nPlease share your 10-digit mobile number for verification.`,
+          addBotMessage(t('agentMaster', language), t('askPhone', language, { name: userInput.trim() }),
             { suggestions: ['9876543210', '9876543212', '9876543214'] });
           break;
 
@@ -134,22 +147,21 @@ const TataCapitalLoanChatbot = () => {
               setSessionData(prev => ({ ...prev, customerData: customer, phoneVerified: true }));
               setCurrentStage('verification');
               setConversationState('show_profile');
-              addBotMessage('Verification Agent', `✅ Mobile verified successfully!\n\n👤 ${customer.name}\n📊 Credit Score: ${customer.credit_score}/900\n💰 Pre-approved: ₹${customer.pre_approved_limit.toLocaleString('en-IN')}`);
+              addBotMessage(t('agentVerification', language), `${t('phoneVerified', language)}\n\n👤 ${customer.name}\n📊 ${t('creditScore', language)}: ${customer.credit_score}/900\n💰 ${t('preApproved', language)}: ₹${customer.pre_approved_limit.toLocaleString('en-IN')}`);
               setTimeout(() => {
-                addBotMessage('Sales Agent', `🎉 Great news, ${customer.name.split(' ')[0]}!\n\nYou have a pre-approved personal loan offer of ₹${customer.pre_approved_limit.toLocaleString('en-IN')}!\n\nHow much would you like to borrow?`,
+                addBotMessage(t('agentSales', language), t('askAmount', language, { amount: customer.pre_approved_limit.toLocaleString('en-IN') }),
                   { suggestions: ['₹2,00,000', '₹3,00,000', `₹${customer.pre_approved_limit.toLocaleString('en-IN')}`] });
                 setConversationState('ask_amount');
               }, 2000);
             } else {
-              addBotMessage('Verification Agent', '❌ Mobile number not found in our records.\n\nPlease try again or contact our support team.');
+              addBotMessage(t('agentVerification', language), t('phoneNotFound', language));
             }
           } else {
-            addBotMessage('Master Agent', 'Please enter a valid 10-digit mobile number.');
+            addBotMessage(t('agentMaster', language), t('invalidPhone', language));
           }
           break;
 
         case 'ask_amount':
-          // Remove commas and extract all digits for Indian number format (e.g., 2,00,000)
           const cleanedInput = userInput.replace(/,/g, '');
           const amt = cleanedInput.match(/\d+/);
           if (amt) {
@@ -160,15 +172,14 @@ const TataCapitalLoanChatbot = () => {
             setSessionData(prev => ({ ...prev, loanAmount: amount }));
             
             if (!elig.approved) {
-              addBotMessage('Underwriting Agent', `❌ Application Declined\n\n${elig.message}\n\nPlease contact our support team for assistance.`,
-                { error: true, suggestions: ['Contact Support', 'Try Another Amount'] });
+              addBotMessage(t('agentUnderwriting', language), `${t('declined', language)}\n\n${elig.message}`,
+                { error: true, suggestions: [t('contactSupport', language), t('tryAnother', language)] });
               setConversationState('rejected');
               return;
             }
 
             if (elig.approved === 'conditional') {
-              setConversationState('need_salary');
-              addBotMessage('Sales Agent', `Loan Amount: ₹${amount.toLocaleString('en-IN')}\n\n${elig.message}\n\nFirst, let's choose your preferred tenure:`,
+              addBotMessage(t('agentSales', language), `💰 ₹${amount.toLocaleString('en-IN')}\n\n${elig.message}\n\n${t('chooseTenure', language)}`,
                 { suggestions: ['24 months', '36 months', '48 months'] });
               setConversationState('ask_tenure_cond');
               return;
@@ -178,10 +189,10 @@ const TataCapitalLoanChatbot = () => {
             const emi12 = calculateEMI(amount, 10.5, 12);
             const emi24 = calculateEMI(amount, 10.5, 24);
             const emi36 = calculateEMI(amount, 10.5, 36);
-            addBotMessage('Sales Agent', `Perfect! ₹${amount.toLocaleString('en-IN')} ${elig.message}\n\nChoose your preferred tenure:\n\n📅 12 months: ₹${emi12.toLocaleString('en-IN')}/month\n📅 24 months: ₹${emi24.toLocaleString('en-IN')}/month\n📅 36 months: ₹${emi36.toLocaleString('en-IN')}/month`,
+            addBotMessage(t('agentSales', language), `💰 ₹${amount.toLocaleString('en-IN')} ${elig.message}\n\n${t('chooseTenure', language)}\n\n📅 12 ${t('months', language)}: ₹${emi12.toLocaleString('en-IN')}${t('emiPerMonth', language)}\n📅 24 ${t('months', language)}: ₹${emi24.toLocaleString('en-IN')}${t('emiPerMonth', language)}\n📅 36 ${t('months', language)}: ₹${emi36.toLocaleString('en-IN')}${t('emiPerMonth', language)}`,
               { suggestions: ['24 months', '36 months', '48 months'] });
           } else {
-            addBotMessage('Sales Agent', 'Please enter a valid loan amount (e.g., 300000)');
+            addBotMessage(t('agentSales', language), 'Please enter a valid loan amount (e.g., 300000)');
           }
           break;
 
@@ -191,26 +202,27 @@ const TataCapitalLoanChatbot = () => {
           if (ten) {
             const tenure = parseInt(ten[0]);
             const { loanAmount, customerData } = sessionData;
-            const emi = calculateEMI(loanAmount, 10.5, tenure);
+            const emi = calculateEMI(loanAmount!, 10.5, tenure);
             setSessionData(prev => ({ ...prev, tenure, emi }));
             
             const total = customerData.total_existing_emi + emi;
             const ratio = (total / customerData.monthly_salary) * 100;
             
-            addBotMessage('Sales Agent', `📋 Loan Summary\n\nAmount: ₹${loanAmount.toLocaleString('en-IN')}\nTenure: ${tenure} months\nMonthly EMI: ₹${emi.toLocaleString('en-IN')}\nEMI/Income Ratio: ${ratio.toFixed(1)}%\n\n${conversationState === 'ask_tenure_cond' ? '📄 Please upload your salary slip to proceed' : '✅ Ready to proceed with credit check?'}`,
-              { suggestions: conversationState === 'ask_tenure_cond' ? ['Upload Document'] : ['Yes, Proceed'] });
+            const isConditional = conversationState === 'ask_tenure_cond';
+            addBotMessage(t('agentSales', language), `📋 Loan Summary\n\n💰 Amount: ₹${loanAmount!.toLocaleString('en-IN')}\n📅 Tenure: ${tenure} ${t('months', language)}\n💳 EMI: ₹${emi.toLocaleString('en-IN')}${t('emiPerMonth', language)}\n📊 ${t('emiRatio', language)}: ${ratio.toFixed(1)}%\n\n${isConditional ? t('uploadSalarySlip', language) : t('proceed', language) + '?'}`,
+              { suggestions: isConditional ? [t('uploadButton', language)] : [t('proceed', language)] });
             
-            setConversationState(conversationState === 'ask_tenure_cond' ? 'upload_salary' : 'confirm');
+            setConversationState(isConditional ? 'upload_salary' : 'confirm');
           }
           break;
 
         case 'upload_salary':
-          addBotMessage('Verification Agent', '📎 Click the upload button below to submit your salary slip (PDF, JPG, or PNG format).',
+          addBotMessage(t('agentVerification', language), t('uploadSalarySlip', language),
             { needsUpload: true });
           break;
 
         case 'confirm':
-          if (lower.includes('yes') || lower.includes('proceed')) {
+          if (lower.includes('yes') || lower.includes('proceed') || lower.includes('हाँ')) {
             triggerCreditCheck();
           }
           break;
@@ -220,7 +232,7 @@ const TataCapitalLoanChatbot = () => {
           break;
 
         default:
-          addBotMessage('Master Agent', 'Please choose from the suggestions below.');
+          addBotMessage(t('agentMaster', language), 'Please choose from the suggestions below.');
       }
     }, 1000);
   };
@@ -228,19 +240,19 @@ const TataCapitalLoanChatbot = () => {
   const triggerCreditCheck = () => {
     setCurrentStage('underwriting');
     setConversationState('credit_check');
-    addBotMessage('Underwriting Agent', '🔍 Running comprehensive credit check...\n\nThis will take a few moments.', { showLoader: true });
+    addBotMessage(t('agentUnderwriting', language), t('checkingCredit', language), { showLoader: true });
     
     setTimeout(() => {
       const { customerData, emi } = sessionData;
-      const ratio = ((customerData.total_existing_emi + emi) / customerData.monthly_salary) * 100;
+      const ratio = ((customerData.total_existing_emi + emi!) / customerData.monthly_salary) * 100;
       
       setIsTyping(false);
       if (customerData.credit_score >= 700 && ratio <= 50) {
-        addBotMessage('Underwriting Agent', `✅ CREDIT CHECK APPROVED!\n\n📊 Credit Score: ${customerData.credit_score}/900\n💳 EMI/Income Ratio: ${ratio.toFixed(1)}%\n✨ Status: Excellent\n\nReady to generate your sanction letter?`,
-          { suggestions: ['Generate Sanction Letter'] });
+        addBotMessage(t('agentUnderwriting', language), `${t('approved', language)}\n\n📊 ${t('creditScore', language)}: ${customerData.credit_score}/900\n💳 ${t('emiRatio', language)}: ${ratio.toFixed(1)}%\n✨ Status: Excellent\n\n${t('generateLetter', language)}?`,
+          { suggestions: [t('generateLetter', language)] });
         setConversationState('sanction_ready');
       } else {
-        addBotMessage('Underwriting Agent', `❌ Credit Check Declined\n\nReason: ${ratio > 50 ? 'EMI/Income ratio exceeds 50%' : 'Credit score below minimum requirement'}\n\nPlease contact support for assistance.`,
+        addBotMessage(t('agentUnderwriting', language), `${t('declined', language)}\n\n${ratio > 50 ? t('rejectionEmiRatio', language) : t('rejectionCredit', language, { score: customerData.credit_score })}`,
           { error: true });
       }
     }, 3000);
@@ -248,32 +260,47 @@ const TataCapitalLoanChatbot = () => {
 
   const generateSanctionLetter = () => {
     setCurrentStage('sanction');
-    addBotMessage('Document Agent', '📄 Generating your sanction letter...\n\nPlease wait while we prepare your documents.', { showLoader: true });
+    addBotMessage(t('agentDocument', language), t('generatingLetter', language), { showLoader: true });
     
     setTimeout(() => {
       const { customerData, loanAmount, tenure, emi } = sessionData;
       const ref = `TATA-${Date.now().toString().slice(-8)}`;
       
       setIsTyping(false);
-      addBotMessage('Document Agent', `🎊 CONGRATULATIONS ${customerData.name.toUpperCase()}!\n\n✅ YOUR LOAN IS SANCTIONED!\n\n📋 Reference: ${ref}\n💰 Amount: ₹${loanAmount.toLocaleString('en-IN')}\n📅 Tenure: ${tenure} months\n💳 Monthly EMI: ₹${emi.toLocaleString('en-IN')}\n📊 Total Payment: ₹${(emi * tenure).toLocaleString('en-IN')}\n\n⏱️ Funds will be disbursed within 24 hours!\n\nThank you for choosing Tata Capital! 🎉`,
-        { downloadable: true, suggestions: ['Download PDF', 'E-Sign Now'] });
+      addBotMessage(t('agentSanction', language), `${t('congratulations', language)} ${customerData.name.toUpperCase()}!\n\n✅ ${t('loanSanctioned', language)}!\n\n📋 ${t('referenceNumber', language)}: ${ref}\n💰 Amount: ₹${loanAmount!.toLocaleString('en-IN')}\n📅 Tenure: ${tenure} ${t('months', language)}\n💳 EMI: ₹${emi!.toLocaleString('en-IN')}${t('emiPerMonth', language)}\n📊 Total: ₹${(emi! * tenure!).toLocaleString('en-IN')}\n\n⏱️ ${t('disbursalTime', language)} 🎉`,
+        { downloadable: true, suggestions: [t('downloadLetter', language), t('eSign', language)] });
     }, 3000);
   };
 
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (file && file.size <= 5 * 1024 * 1024) {
-      setUploadedFile(file);
-      addUserMessage(`📎 Uploaded: ${file.name}`);
-      setIsTyping(true);
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert(t('fileSizeError', language));
+      return;
+    }
+
+    setUploadedFile(file);
+    addUserMessage(`📎 ${file.name}`);
+    setIsTyping(true);
+    
+    // Use salary extractor
+    const extractionResult = await extractSalarySlipData(file, sessionData.customerData?.name);
+    
+    setIsTyping(false);
+    
+    if (extractionResult.success) {
+      const displayText = formatExtractionForDisplay(extractionResult);
+      const jsonData = extractionToJSON(extractionResult);
       
-      setTimeout(() => {
-        setIsTyping(false);
-        addBotMessage('Verification Agent', `✅ Document verified successfully!\n\n💰 Salary: ₹${sessionData.customerData.monthly_salary.toLocaleString('en-IN')}\n✨ Status: Verified\n\nProceeding to credit check...`);
-        setTimeout(() => triggerCreditCheck(), 2000);
-      }, 2500);
+      // Log JSON for underwriting agent (backend integration point)
+      console.log('📤 Sending to Underwriting Agent:', JSON.stringify(jsonData, null, 2));
+      
+      addBotMessage(t('agentVerification', language), `${displayText}\n\n${t('checkingCredit', language).replace('🔍 ', '')}`);
+      setTimeout(() => triggerCreditCheck(), 2000);
     } else {
-      alert('Please upload a file under 5MB');
+      addBotMessage(t('agentVerification', language), `${t('uploadError', language)}\n\n${extractionResult.errors?.join('\n')}`);
     }
   };
 
@@ -284,18 +311,25 @@ const TataCapitalLoanChatbot = () => {
     setInput('');
   };
 
-  const handleSuggestionClick = (s) => {
+  const handleSuggestionClick = (s: string) => {
     addUserMessage(s);
     processConversation(s);
   };
 
-  const getAgentColor = (agent) => {
-    const colors = {
-      'Master Agent': 'from-agent-master to-agent-master/80',
-      'Sales Agent': 'from-agent-sales to-agent-sales/80',
-      'Verification Agent': 'from-agent-verification to-agent-verification/80',
-      'Underwriting Agent': 'from-agent-underwriting to-agent-underwriting/80',
-      'Document Agent': 'from-agent-document to-agent-document/80'
+  const getAgentColor = (agent: string) => {
+    const colors: Record<string, string> = {
+      [t('agentMaster', 'en')]: 'from-agent-master to-agent-master/80',
+      [t('agentMaster', 'hi')]: 'from-agent-master to-agent-master/80',
+      [t('agentSales', 'en')]: 'from-agent-sales to-agent-sales/80',
+      [t('agentSales', 'hi')]: 'from-agent-sales to-agent-sales/80',
+      [t('agentVerification', 'en')]: 'from-agent-verification to-agent-verification/80',
+      [t('agentVerification', 'hi')]: 'from-agent-verification to-agent-verification/80',
+      [t('agentUnderwriting', 'en')]: 'from-agent-underwriting to-agent-underwriting/80',
+      [t('agentUnderwriting', 'hi')]: 'from-agent-underwriting to-agent-underwriting/80',
+      [t('agentDocument', 'en')]: 'from-agent-document to-agent-document/80',
+      [t('agentDocument', 'hi')]: 'from-agent-document to-agent-document/80',
+      [t('agentSanction', 'en')]: 'from-agent-sanction to-agent-sanction/80',
+      [t('agentSanction', 'hi')]: 'from-agent-sanction to-agent-sanction/80',
     };
     return `bg-gradient-to-r ${colors[agent] || 'from-primary to-primary/80'}`;
   };
@@ -312,13 +346,23 @@ const TataCapitalLoanChatbot = () => {
               <span className="text-primary font-bold text-3xl">T</span>
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white">Tata Capital</h1>
-              <p className="text-xs text-secondary-light font-semibold tracking-wide">AI Loan Assistant</p>
+              <h1 className="text-2xl font-bold text-white">{t('appTitle', language)}</h1>
+              <p className="text-xs text-secondary-light font-semibold tracking-wide">{t('appSubtitle', language)}</p>
             </div>
           </div>
-          <div className="flex items-center space-x-3 bg-white/10 px-4 py-2 rounded-lg backdrop-blur-sm">
-            <Phone className="w-5 h-5 text-secondary" />
-            <span className="text-sm font-medium text-white">1860-267-6789</span>
+          <div className="flex items-center space-x-4">
+            {/* Language Toggle */}
+            <button 
+              onClick={toggleLanguage}
+              className="flex items-center space-x-2 bg-white/20 hover:bg-white/30 px-4 py-2 rounded-lg backdrop-blur-sm transition-all"
+            >
+              <Globe className="w-5 h-5 text-secondary" />
+              <span className="text-sm font-medium text-white">{language === 'en' ? 'हिंदी' : 'English'}</span>
+            </button>
+            <div className="flex items-center space-x-3 bg-white/10 px-4 py-2 rounded-lg backdrop-blur-sm">
+              <Phone className="w-5 h-5 text-secondary" />
+              <span className="text-sm font-medium text-white">1860-267-6789</span>
+            </div>
           </div>
         </div>
       </header>
@@ -392,20 +436,20 @@ const TataCapitalLoanChatbot = () => {
                     {msg.downloadable && (
                       <button className="mt-4 px-5 py-2.5 bg-gradient-secondary text-primary rounded-lg text-sm font-semibold flex items-center space-x-2 shadow-md hover:shadow-lg transition-all transform hover:scale-105">
                         <Download className="w-4 h-4" />
-                        <span>Download Sanction Letter</span>
+                        <span>{t('downloadLetter', language)}</span>
                       </button>
                     )}
                     {msg.needsUpload && (
                       <button onClick={() => fileInputRef.current?.click()}
                         className="mt-4 px-5 py-2.5 bg-gradient-primary text-white rounded-lg text-sm font-semibold flex items-center space-x-2 shadow-md hover:shadow-lg transition-all transform hover:scale-105">
                         <Upload className="w-4 h-4" />
-                        <span>Upload Document</span>
+                        <span>{t('uploadButton', language)}</span>
                       </button>
                     )}
                   </div>
                   {msg.suggestions && (
                     <div className="flex flex-wrap gap-2 mt-3">
-                      {msg.suggestions.map((s, i) => (
+                      {msg.suggestions.map((s: string, i: number) => (
                         <button key={i} onClick={() => handleSuggestionClick(s)}
                           className="px-4 py-2 bg-white border-2 border-primary/20 text-primary rounded-full text-xs font-medium hover:bg-primary hover:text-white hover:border-primary transition-all shadow-sm hover:shadow-md transform hover:scale-105">
                           {s}
@@ -443,15 +487,15 @@ const TataCapitalLoanChatbot = () => {
         <div className="max-w-4xl mx-auto flex justify-center items-center space-x-8 text-xs text-foreground">
           <div className="flex items-center space-x-2">
             <Shield className="w-5 h-5 text-secondary" />
-            <span className="font-semibold">RBI Registered</span>
+            <span className="font-semibold">{t('rbiRegistered', language)}</span>
           </div>
           <div className="flex items-center space-x-2">
             <CheckCircle className="w-5 h-5 text-secondary" />
-            <span className="font-semibold">100% Secure</span>
+            <span className="font-semibold">{t('secure', language)}</span>
           </div>
           <div className="flex items-center space-x-2">
             <Clock className="w-5 h-5 text-secondary" />
-            <span className="font-semibold">24hr Disbursal</span>
+            <span className="font-semibold">{t('disbursalTime24hr', language)}</span>
           </div>
         </div>
       </div>
@@ -467,7 +511,7 @@ const TataCapitalLoanChatbot = () => {
           </button>
           <input type="text" value={input} onChange={(e) => setInput(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-            placeholder="Type your message..."
+            placeholder={t('typePlaceholder', language)}
             className="flex-1 px-5 py-3 border-2 border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all bg-background" />
           <button onClick={handleSend} disabled={!input.trim()}
             className="p-3 bg-gradient-primary hover:shadow-glow disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all transform hover:scale-105 shadow-lg">
