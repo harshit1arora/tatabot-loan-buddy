@@ -57,6 +57,7 @@ export default {
           verification: "hsl(var(--agent-verification))",
           underwriting: "hsl(var(--agent-underwriting))",
           document: "hsl(var(--agent-document))",
+          sanction: "hsl(var(--agent-sanction))",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
