@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Upload, CheckCircle, Loader, MessageSquare, User, Bot, Phone, Download, Shield, Clock, Star, Globe } from 'lucide-react';
+import { Send, Upload, CheckCircle, Loader, MessageSquare, User, Bot, Phone, Download, Shield, Clock, Star, Globe, Mic, MicOff } from 'lucide-react';
 import { translations, t, Language } from '@/data/translations';
 import { extractSalarySlipData, formatExtractionForDisplay, extractionToJSON } from '@/utils/salaryExtractor';
+import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 
 // Complete Customer Data
 const mockCustomers = [
@@ -68,6 +69,9 @@ const TataCapitalLoanChatbot = () => {
   const [conversationState, setConversationState] = useState('greeting');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Speech recognition hook
+  const { isListening, transcript, startListening, stopListening, isSupported: isSpeechSupported } = useSpeechRecognition(language);
 
   const stages = [
     { id: 'conversation', label: t('stageConversation', language), icon: MessageSquare },
@@ -304,10 +308,23 @@ const TataCapitalLoanChatbot = () => {
     }
   };
 
+  // Update input when speech recognition provides transcript
+  useEffect(() => {
+    if (transcript && !isListening) {
+      setInput(transcript);
+    }
+  }, [transcript, isListening]);
+
   const handleSend = () => {
-    if (!input.trim()) return;
-    addUserMessage(input);
-    processConversation(input);
+    const messageToSend = input.trim() || transcript.trim();
+    if (!messageToSend) return;
+    
+    if (isListening) {
+      stopListening();
+    }
+    
+    addUserMessage(messageToSend);
+    processConversation(messageToSend);
     setInput('');
   };
 
@@ -509,11 +526,34 @@ const TataCapitalLoanChatbot = () => {
             className="p-3 bg-gradient-to-br from-muted to-muted/50 hover:from-primary/10 hover:to-primary/5 rounded-xl border-2 border-primary/20 transition-all transform hover:scale-105">
             <Upload className="w-5 h-5 text-primary" />
           </button>
-          <input type="text" value={input} onChange={(e) => setInput(e.target.value)}
+          
+          {/* Voice Input Button */}
+          {isSpeechSupported && (
+            <button 
+              onClick={isListening ? stopListening : startListening}
+              className={`p-3 rounded-xl border-2 transition-all transform hover:scale-105 ${
+                isListening 
+                  ? 'bg-red-500 border-red-500 animate-pulse' 
+                  : 'bg-gradient-to-br from-muted to-muted/50 border-primary/20 hover:from-primary/10 hover:to-primary/5'
+              }`}
+            >
+              {isListening ? (
+                <MicOff className="w-5 h-5 text-white" />
+              ) : (
+                <Mic className="w-5 h-5 text-primary" />
+              )}
+            </button>
+          )}
+          
+          <input type="text" value={isListening ? transcript : input} 
+            onChange={(e) => setInput(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-            placeholder={t('typePlaceholder', language)}
-            className="flex-1 px-5 py-3 border-2 border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all bg-background" />
-          <button onClick={handleSend} disabled={!input.trim()}
+            placeholder={isListening ? (language === 'hi' ? 'बोलिए...' : 'Listening...') : t('typePlaceholder', language)}
+            className={`flex-1 px-5 py-3 border-2 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all bg-background ${
+              isListening ? 'border-red-300 bg-red-50' : 'border-border'
+            }`} 
+          />
+          <button onClick={handleSend} disabled={!input.trim() && !transcript.trim()}
             className="p-3 bg-gradient-primary hover:shadow-glow disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all transform hover:scale-105 shadow-lg">
             <Send className="w-5 h-5 text-white" />
           </button>
