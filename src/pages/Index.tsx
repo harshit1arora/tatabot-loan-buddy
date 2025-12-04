@@ -1,8 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, Upload, CheckCircle, Loader, MessageSquare, User, Bot, Phone, Download, Shield, Clock, Star, Globe, Mic, MicOff } from 'lucide-react';
 import { translations, t, Language } from '@/data/translations';
 import { extractSalarySlipData, formatExtractionForDisplay, extractionToJSON } from '@/utils/salaryExtractor';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
+import VoiceAssistant from '@/components/VoiceAssistant';
 
 // Complete Customer Data
 const mockCustomers = [
@@ -333,6 +334,15 @@ const TataCapitalLoanChatbot = () => {
     processConversation(s);
   };
 
+  // Handle voice assistant messages
+  const handleVoiceMessage = useCallback((message: string) => {
+    addUserMessage(message);
+    processConversation(message);
+  }, []);
+
+  // Get last bot message for TTS
+  const lastBotMessage = messages.filter(m => m.type === 'bot').slice(-1)[0]?.content;
+
   const getAgentColor = (agent: string) => {
     const colors: Record<string, string> = {
       [t('agentMaster', 'en')]: 'from-agent-master to-agent-master/80',
@@ -559,6 +569,13 @@ const TataCapitalLoanChatbot = () => {
           </button>
         </div>
       </div>
+
+      {/* Voice Assistant Floating Button */}
+      <VoiceAssistant 
+        language={language}
+        onMessage={handleVoiceMessage}
+        lastBotMessage={lastBotMessage}
+      />
     </div>
   );
 };
