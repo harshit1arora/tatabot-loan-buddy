@@ -4,6 +4,7 @@ import { translations, t, Language } from '@/data/translations';
 import { extractSalarySlipData, formatExtractionForDisplay, extractionToJSON } from '@/utils/salaryExtractor';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import VoiceAssistant from '@/components/VoiceAssistant';
+import EMICalculator from '@/components/EMICalculator';
 
 // Complete Customer Data
 const mockCustomers = [
@@ -576,6 +577,9 @@ const TataCapitalLoanChatbot = () => {
         onMessage={handleVoiceMessage}
         lastBotMessage={lastBotMessage}
       />
+
+      {/* EMI Calculator Widget */}
+      <EMICalculator language={language} />
     </div>
   );
 };
