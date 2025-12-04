@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Upload, CheckCircle, Loader, MessageSquare, User, Bot, Phone, Download, Shield, Clock, Star, Globe, Mic, MicOff } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Send, Upload, CheckCircle, Loader, MessageSquare, User, Bot, Phone, Download, Shield, Clock, Star, Globe, Mic, MicOff, FileSearch } from 'lucide-react';
 import { translations, t, Language } from '@/data/translations';
 import { extractSalarySlipData, formatExtractionForDisplay, extractionToJSON } from '@/utils/salaryExtractor';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
@@ -379,6 +380,14 @@ const TataCapitalLoanChatbot = () => {
             </div>
           </div>
           <div className="flex items-center space-x-4">
+            {/* Track Status Link */}
+            <Link 
+              to="/status"
+              className="flex items-center space-x-2 bg-secondary hover:bg-secondary-light px-4 py-2 rounded-lg transition-all transform hover:scale-105"
+            >
+              <FileSearch className="w-5 h-5 text-primary" />
+              <span className="text-sm font-medium text-primary">{language === 'hi' ? 'स्थिति देखें' : 'Track Status'}</span>
+            </Link>
             {/* Language Toggle */}
             <button 
               onClick={toggleLanguage}
