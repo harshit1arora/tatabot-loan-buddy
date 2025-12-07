@@ -102,10 +102,10 @@ const FAQDrawer: React.FC = () => {
     <Drawer open={isOpen} onOpenChange={setIsOpen}>
       <DrawerTrigger asChild>
         <Button 
-          className="fixed bottom-24 left-6 z-40 rounded-full w-14 h-14 shadow-xl bg-secondary hover:bg-secondary/90"
+          className="fixed bottom-44 left-6 z-40 rounded-full w-12 h-12 shadow-xl bg-secondary hover:bg-secondary/90"
           size="icon"
         >
-          <HelpCircle className="w-6 h-6 text-secondary-foreground" />
+          <HelpCircle className="w-5 h-5 text-secondary-foreground" />
         </Button>
       </DrawerTrigger>
       <DrawerContent className="max-h-[85vh]">
