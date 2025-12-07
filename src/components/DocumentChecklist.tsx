@@ -85,10 +85,10 @@ const DocumentChecklist: React.FC<DocumentChecklistProps> = ({ onUpload }) => {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button 
-          className="fixed bottom-24 right-6 z-40 rounded-full w-14 h-14 shadow-xl bg-primary hover:bg-primary/90"
+          className="fixed bottom-44 right-6 z-40 rounded-full w-12 h-12 shadow-xl bg-primary hover:bg-primary/90"
           size="icon"
         >
-          <FileCheck className="w-6 h-6" />
+          <FileCheck className="w-5 h-5" />
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md max-h-[85vh] overflow-hidden flex flex-col">
