@@ -6,6 +6,10 @@ import { extractSalarySlipData, formatExtractionForDisplay, extractionToJSON } f
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import VoiceAssistant from '@/components/VoiceAssistant';
 import EMICalculator from '@/components/EMICalculator';
+import TypingIndicator from '@/components/TypingIndicator';
+import DocumentPreview from '@/components/DocumentPreview';
+import DocumentChecklist from '@/components/DocumentChecklist';
+import FAQDrawer from '@/components/FAQDrawer';
 
 // Complete Customer Data
 const mockCustomers = [
@@ -57,6 +61,7 @@ const TataCapitalLoanChatbot = () => {
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [previewFile, setPreviewFile] = useState<File | null>(null);
   const [currentStage, setCurrentStage] = useState('conversation');
   const [language, setLanguage] = useState<Language>('en');
   const [sessionData, setSessionData] = useState({
@@ -279,21 +284,22 @@ const TataCapitalLoanChatbot = () => {
     }, 3000);
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setPreviewFile(file);
+  };
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert(t('fileSizeError', language));
-      return;
-    }
+  const handleFileUploadConfirm = async () => {
+    if (!previewFile) return;
 
-    setUploadedFile(file);
-    addUserMessage(`📎 ${file.name}`);
+    setUploadedFile(previewFile);
+    setPreviewFile(null);
+    addUserMessage(`📎 ${previewFile.name}`);
     setIsTyping(true);
     
     // Use salary extractor
-    const extractionResult = await extractSalarySlipData(file, sessionData.customerData?.name);
+    const extractionResult = await extractSalarySlipData(previewFile, sessionData.customerData?.name);
     
     setIsTyping(false);
     
@@ -308,6 +314,13 @@ const TataCapitalLoanChatbot = () => {
       setTimeout(() => triggerCreditCheck(), 2000);
     } else {
       addBotMessage(t('agentVerification', language), `${t('uploadError', language)}\n\n${extractionResult.errors?.join('\n')}`);
+    }
+  };
+
+  const handleFileUploadCancel = () => {
+    setPreviewFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -499,22 +512,7 @@ const TataCapitalLoanChatbot = () => {
             </div>
           ))}
           
-          {isTyping && (
-            <div className="flex justify-start animate-slide-up">
-              <div className="flex items-start space-x-3">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-accent to-accent/80 flex items-center justify-center shadow-lg">
-                  <Bot className="w-6 h-6 text-white" />
-                </div>
-                <div className="bg-white px-6 py-4 rounded-2xl shadow-lg border border-border">
-                  <div className="flex space-x-2">
-                    <div className="w-2.5 h-2.5 bg-primary rounded-full animate-bounce" />
-                    <div className="w-2.5 h-2.5 bg-primary rounded-full animate-bounce" style={{animationDelay:'150ms'}} />
-                    <div className="w-2.5 h-2.5 bg-primary rounded-full animate-bounce" style={{animationDelay:'300ms'}} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          {isTyping && <TypingIndicator agentName={language === 'hi' ? 'AI सहायक' : 'AI Assistant'} />}
           <div ref={messagesEndRef} />
         </div>
       </div>
@@ -540,7 +538,7 @@ const TataCapitalLoanChatbot = () => {
       {/* Input */}
       <div className="bg-white border-t-2 border-primary/10 px-4 py-5 shadow-xl">
         <div className="max-w-4xl mx-auto flex items-center space-x-3">
-          <input type="file" ref={fileInputRef} onChange={handleFileUpload}
+          <input type="file" ref={fileInputRef} onChange={handleFileSelect}
             accept=".pdf,.jpg,.jpeg,.png" className="hidden" />
           <button onClick={() => fileInputRef.current?.click()}
             className="p-3 bg-gradient-to-br from-muted to-muted/50 hover:from-primary/10 hover:to-primary/5 rounded-xl border-2 border-primary/20 transition-all transform hover:scale-105">
@@ -589,6 +587,21 @@ const TataCapitalLoanChatbot = () => {
 
       {/* EMI Calculator Widget */}
       <EMICalculator language={language} />
+
+      {/* Document Checklist */}
+      <DocumentChecklist />
+
+      {/* FAQ Drawer */}
+      <FAQDrawer />
+
+      {/* Document Preview Modal */}
+      {previewFile && (
+        <DocumentPreview
+          file={previewFile}
+          onConfirm={handleFileUploadConfirm}
+          onCancel={handleFileUploadCancel}
+        />
+      )}
     </div>
   );
 };
